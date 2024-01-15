@@ -10,11 +10,11 @@ class DBManager:
         self.db_path = db_path
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
-    
+
     def close_db(self):
         if self.conn:
             self.conn.close()
-    
+
     def commit_db(self):
         if self.conn:
             self.conn.commit()
@@ -22,9 +22,10 @@ class DBManager:
 
 class ApostaDB(DBManager):
     nome_tabela = 'apostas'
+
     def __init__(self, db_path: str = None) -> None:
         if db_path is None:
-            db_path = 'apostas.db'
+            db_path = f'{self.nome_tabela}.db'
         super().__init__(db_path)
         self.criar_tabela()
 
@@ -65,6 +66,7 @@ class ApostaDB(DBManager):
     def ler_apostas(self, loteria: str, concurso: int = None) -> None:
         filtro = '(loteria, concurso) = (?, ?)' if concurso else 'loteria = ?'
         sql = f'SELECT * FROM {self.nome_tabela} WHERE {filtro}'
-        querry = self.cursor.execute(sql, [arg for arg in (loteria, concurso) if arg])
+        querry = self.cursor.execute(
+            sql, [arg for arg in (loteria, concurso) if arg])
         apostas = [Aposta.from_db(ap) for ap in querry.fetchall()]
         return apostas

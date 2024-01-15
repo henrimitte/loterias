@@ -1,32 +1,35 @@
 import json
 
+from dataclasses import dataclass, field
 
+
+@dataclass
 class Aposta:
-    def __init__(self, loteria, concurso, dezenas, **kwargs) -> None:
-        self.loteria = loteria
-        self.concurso = concurso
-        self.dezenas = dezenas
-        self.conferida = False
-        self.quantidadeAcertos = 0
-        self.dezenasAcertadas = []
-        self.valorPremiacao = 0.0
-    
+    loteria: str
+    concurso: int
+    dezenas: list[int]
+    conferida: bool = field(default=False)
+    quantidadeAcertos: int = field(default=0)
+    dezenasAcertadas: list[int] = field(default_factory=list)
+    valorPremiacao: float = field(default=0.0)
+    _id: int = field(repr=False, default=None)
+
     def to_db(self) -> dict:
         return {'loteria': self.loteria,
                 'concurso': self.concurso,
                 'dezenas': json.dumps(self.dezenas),
-                'conferida': int(self.conferida),
+                'conferida': self.conferida,
                 'quantidadeAcertos': self.quantidadeAcertos,
                 'dezenasAcertadas': json.dumps(self.dezenasAcertadas),
-                'valorPremiacao': self.valorPremiacao,}
+                'valorPremiacao': self.valorPremiacao, }
 
     @classmethod
     def from_db(cls, aposta):
-        _, *aposta = aposta
-        return Aposta(loteria=aposta[0],
-                      concurso=aposta[1],
-                      dezenas=json.loads(aposta[2]),
-                      conferida=bool(aposta[3]),
-                      quantidadeAcertos=aposta[4],
-                      dezenasAcertadas=json.loads(aposta[5]),
-                      valorPremiacao=aposta[6])
+        return Aposta(_id=aposta[0],
+                      loteria=aposta[1],
+                      concurso=aposta[2],
+                      dezenas=json.loads(aposta[3]),
+                      conferida=bool(aposta[4]),
+                      quantidadeAcertos=aposta[5],
+                      dezenasAcertadas=json.loads(aposta[6]),
+                      valorPremiacao=aposta[7],)
