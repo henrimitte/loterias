@@ -34,7 +34,7 @@ class Loteria(ABC):
             logger.debug(f'DEZENAS não fornecidas. Gerando aposta aleatoria.')
             dezenas = self.surpresinha()
         if self.dezenas_sao_validas(dezenas):
-            logger.debug(f'Aposta da {self.nome_apresentacao} com {len(dezenas)} dezenas criada com sucesso!')
+            logger.debug(f'Aposta {self.nome_apresentacao} de {len(dezenas)} dezenas, concurso {concurso} criada com sucesso!')
             return Aposta(loteria=self.nome, concurso=concurso, dezenas=dezenas)
 
     def surpresinha(self, quantidade: int = None) -> list[int]:
