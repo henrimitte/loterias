@@ -3,7 +3,11 @@ from dataclasses import dataclass
 from random import sample
 
 from aposta import Aposta
+from config import config_logger
 from db_manager import ApostaDB
+
+
+logger = config_logger(__name__)
 
 
 @dataclass
@@ -20,22 +24,30 @@ class Loteria(ABC):
         self.nome_apresentacao = nome_apresentacao
         self.limites = limites
         self._adb = ApostaDB()
+        logger.debug(f'Loteria {self.nome_apresentacao} iniciada.')
 
     def criar_aposta(self, dezenas: list[int] = None, concurso: int = None) -> Aposta:
         if concurso is None:
+            logger.debug(f'CONCURSO não fornecido. Definindo como 0.')
             concurso = 0
         if dezenas is None:
+            logger.debug(f'DEZENAS não fornecidas. Gerando aposta aleatoria.')
             dezenas = self.surpresinha()
+        logger.debug(f'Aposta criada com sucesso!')
         return Aposta(loteria=self.nome, concurso=concurso, dezenas=dezenas)
 
     def surpresinha(self, quantidade: int = None) -> list[int]:
         if quantidade is None:
             quantidade = self.limites.minimo
         if self.limites.minimo <= quantidade <= self.limites.maximo:
+            logger.debug(f'Gerando SURPRESINHA com {quantidade} dezenas.')
             return sorted(sample(range(self.limites.menor, self.limites.maior + 1), k=quantidade))
+        logger.error(
+            f'Erro ao gerar SURPRESINHA.\QUANTIDADE de dezenas deve obedecer os limites: {self.limites.minimo} <= QUANTIDADE <= {self.limites.maximo}. QUANTIDADE fornecida = {quantidade}.')
 
     def salvar_aposta(self, aposta: Aposta) -> None:
         self._adb.registrar_aposta(aposta)
+        logger.info(f'Aposta salva com sucesso!')
 
 
 class DuplaSena(Loteria):
@@ -68,8 +80,18 @@ class Quina(Loteria):
                          limites=Limites(1, 80, 5, 15))
 
 
-opcoes_loterias = {'duplasena': DuplaSena(),
-                   'lotofacil': Lotofacil(), 
-                   'lotomania': Lotomania(), 
-                   'mega': MegaSena(), 
-                   'quina': Quina()}
+opcoes_loterias = ['duplasena', 'lotofacil', 'lotomania', 'mega', 'quina']
+
+
+def loteria_factory(loteria: str) -> Loteria:
+    match loteria:
+        case 'duplasena':
+            return DuplaSena()
+        case 'lotofacil':
+            return Lotofacil()
+        case 'lotomania':
+            return Lotomania()
+        case 'mega':
+            return MegaSena()
+        case 'quina':
+            return Quina()
