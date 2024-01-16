@@ -1,11 +1,15 @@
+import json
+import urllib.request
+
 from abc import ABC
 from dataclasses import dataclass
 from enum import StrEnum
 from random import sample
 
 from aposta import Aposta
+from resultado import Resultado
 from config import config_logger
-from db_manager import ApostaDB
+from db_manager import ApostaDB, ResultadoDB
 
 
 logger = config_logger(__name__)
@@ -33,6 +37,7 @@ class Loteria(ABC):
         self.nome_apresentacao = nome_apresentacao
         self.limites = limites
         self._adb = ApostaDB()
+        self._rdb = ResultadoDB()
         logger.debug(f'Loteria {self.nome_apresentacao} iniciada.')
 
     def criar_aposta(self, dezenas: list[int] = None, concurso: int = None) -> Aposta:
@@ -119,7 +124,16 @@ class Loteria(ABC):
 
     def encerrar(self):
         self._adb.close_db()
+        self._rdb.close_db()
         logger.debug(f'Loteria {self.nome_apresentacao} encerrada.')
+
+    def buscar_resultado_online(self, concurso: int) -> Resultado:
+        logger.debug('Buscando resultado da %s para o concurso %s', self.nome_apresentacao, concurso)
+        url = f'https://loteriascaixa-api.herokuapp.com/api/{self.nome}/{concurso}'
+        with urllib.request.urlopen(url) as req:
+            resultado = json.load(req)
+            return Resultado.from_json(**resultado)
+        logger.error('Erro ao procurar resultado online.')
 
 
 class DuplaSena(Loteria):
