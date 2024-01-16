@@ -32,7 +32,7 @@ class Loteria(ABC):
             concurso = 0
         if dezenas is None:
             logger.debug(f'DEZENAS não fornecidas. Gerando aposta aleatoria.')
-            dezenas = self.surpresinha()
+            dezenas = self.escolher_dezenas()
         if self.dezenas_sao_validas(dezenas):
             logger.debug(
                 f'Aposta {self.nome_apresentacao} de {len(dezenas)} dezenas, concurso {concurso} criada com sucesso!')
@@ -53,25 +53,43 @@ class Loteria(ABC):
 
     def dezenas_sao_validas(self, dezenas: list[int]) -> bool:
         qtd, mid, mad = len(dezenas), min(dezenas), max(dezenas)
+        validar = True
         if not (self.limites.minimo <= qtd <= self.limites.maximo):
             logger.error(
                 f'QUANTIDADE incorreta de dezenas. QUANTIDADE deve obedecer limites: {self.limites.minimo} <= QUANTIDADE <= {self.limites.maximo}. QUANTIDADE fornecida = {qtd}.')
-            return False
+            validar = False
         if not (mid >= self.limites.menor):
             logger.error(
                 f'MENOR dezena deve ser >= {self.limites.menor}. MENOR dezena fornecida = {mid}.')
-            return False
+            validar = False
         if not (mad <= self.limites.maior):
             logger.error(
                 f'MAIOR dezena deve ser <= {self.limites.maior}. MAIOR dezena fornecida = {mad}.')
-            return False
+            validar = False
         if not (len(set(dezenas)) == qtd):
             logger.error(f'DEZENAS não podem ser repetidas.')
-            return False
-        logger.debug(
-            f'Dezenas fornecidas são válidas para {self.nome_apresentacao}.')
-        return True
+            validar = False
 
+        if validar:
+            logger.debug(f'Dezenas fornecidas são válidas para {self.nome_apresentacao}.')
+        return validar
+
+    def escolher_dezenas(self) -> list[int]:
+        done = False
+        escolha = '1'
+        dezenas = self.surpresinha()
+        while not done:
+            logger.info(f'{self.nome_apresentacao.upper()}: {" ".join(map(str, dezenas))}')
+            escolha = input(
+                f'[1] Gerar novas dezenas  [2] Confirmar  [3] Sair: ')
+            match escolha:
+                case '1':
+                    dezenas = self.surpresinha()
+                case '2' | '':
+                    done = True
+                    return dezenas
+                case '3':
+                    done = True
 
 class DuplaSena(Loteria):
     def __init__(self):
