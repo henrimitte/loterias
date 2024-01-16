@@ -1,6 +1,6 @@
 import json
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -27,7 +27,7 @@ class Resultado:
     valorAcumuladoProximoConcurso: float
     valorArrecadado: float
     valorEstimadoProximoConcurso: int
-    _id: int = None
+    _id: int = field(repr=False, default=None)
 
     def to_db(self) -> dict:
         '''Exporta como dicionário para salvar no Banco de Dados.'''
@@ -80,3 +80,29 @@ class Resultado:
                 valorAcumuladoProximoConcurso = resultado[19],
                 valorArrecadado = resultado[20],
                 valorEstimadoProximoConcurso = resultado[21],)
+
+    @classmethod
+    def from_json(cls, resultado):
+        if resultado:
+            return Resultado(
+                acumulou = bool(resultado['acumulou']),
+                concurso = resultado['concurso'],
+                data = resultado['data'],
+                dataProximoConcurso = resultado['dataProximoConcurso'],
+                dezenas = resultado['dezenas'],
+                dezenasOrdemSorteio = resultado['dezenasOrdemSorteio'],
+                estadosPremiados = resultado['estadosPremiados'],
+                local = resultado['local'],
+                localGanhadores = resultado['localGanhadores'],
+                loteria = resultado['loteria'],
+                mesSorte = resultado['mesSorte'],
+                observacao = resultado['observacao'],
+                premiacoes = resultado['premiacoes'],
+                proximoConcurso = resultado['proximoConcurso'],
+                timeCoracao = resultado['timeCoracao'],
+                trevos = resultado['trevos'],
+                valorAcumuladoConcursoEspecial = resultado['valorAcumuladoConcursoEspecial'],
+                valorAcumuladoConcurso_0_5 = resultado['valorAcumuladoConcurso_0_5'],
+                valorAcumuladoProximoConcurso = resultado['valorAcumuladoProximoConcurso'],
+                valorArrecadado = resultado['valorArrecadado'],
+                valorEstimadoProximoConcurso = int(resultado['valorEstimadoProximoConcurso']),)
