@@ -1,5 +1,6 @@
 from abc import ABC
 from dataclasses import dataclass
+from enum import StrEnum
 from random import sample
 
 from aposta import Aposta
@@ -18,9 +19,17 @@ class Limites:
     maximo: int
 
 
+class Loterias(StrEnum):
+    DUPLASENA = 'duplasena'
+    LOTOFACIL = 'lotofacil'
+    LOTOMANIA = 'lotomania'
+    MEGASENA = 'megasena'
+    QUINA = 'quina'
+
+
 class Loteria(ABC):
     def __init__(self, nome: str, nome_apresentacao: str, limites: Limites) -> None:
-        self.nome = nome
+        self.nome = str(nome)
         self.nome_apresentacao = nome_apresentacao
         self.limites = limites
         self._adb = ApostaDB()
@@ -105,49 +114,53 @@ class Loteria(ABC):
         else:
             print(f'Nenhuma aposta encontrada para {self.nome_apresentacao}.')
 
+    def encerrar(self):
+        self._adb.close_db()
+        logger.debug(f'Loteria {self.nome_apresentacao} encerrada.')
+
 
 class DuplaSena(Loteria):
     def __init__(self):
-        super().__init__(nome='duplasena', nome_apresentacao='Dupla-Sena',
+        super().__init__(nome=Loterias.DUPLASENA, nome_apresentacao='Dupla-Sena',
                          limites=Limites(1, 50, 6, 15))
 
 
 class Lotofacil(Loteria):
     def __init__(self):
-        super().__init__(nome='lotofacil', nome_apresentacao='Lotofácil',
+        super().__init__(nome=Loterias.LOTOFACIL, nome_apresentacao='Lotofácil',
                          limites=Limites(1, 25, 15, 20))
 
 
 class Lotomania(Loteria):
     def __init__(self):
-        super().__init__(nome='lotomania', nome_apresentacao='Lotomania',
+        super().__init__(nome=Loterias.LOTOMANIA, nome_apresentacao='Lotomania',
                          limites=Limites(1, 100, 50, 50))
 
 
 class MegaSena(Loteria):
     def __init__(self):
-        super().__init__(nome='megasena', nome_apresentacao='Mega-Sena',
+        super().__init__(nome=Loterias.MEGASENA, nome_apresentacao='Mega-Sena',
                          limites=Limites(1, 60, 6, 20))
 
 
 class Quina(Loteria):
     def __init__(self):
-        super().__init__(nome='quina', nome_apresentacao='Quina',
+        super().__init__(nome=Loterias.QUINA, nome_apresentacao='Quina',
                          limites=Limites(1, 80, 5, 15))
 
 
-opcoes_loterias = ['duplasena', 'lotofacil', 'lotomania', 'mega', 'quina']
+opcoes_loterias = [Loterias.DUPLASENA, Loterias.LOTOFACIL, Loterias.LOTOMANIA, Loterias.MEGASENA, Loterias.QUINA]
 
 
 def loteria_factory(loteria: str) -> Loteria:
     match loteria:
-        case 'duplasena':
+        case Loterias.DUPLASENA:
             return DuplaSena()
-        case 'lotofacil':
+        case Loterias.LOTOFACIL:
             return Lotofacil()
-        case 'lotomania':
+        case Loterias.LOTOMANIA:
             return Lotomania()
-        case 'mega':
+        case Loterias.MEGASENA:
             return MegaSena()
-        case 'quina':
+        case Loterias.QUINA:
             return Quina()

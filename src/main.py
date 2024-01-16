@@ -25,7 +25,7 @@ def main():
         if aposta:
             loteria.salvar_aposta(aposta)
 
-    loteria._adb.close_db()
+    loteria.encerrar()
 
 
 if __name__ == '__main__':
