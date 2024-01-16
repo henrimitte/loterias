@@ -37,6 +37,7 @@ class Loteria(ABC):
             logger.debug(
                 f'Aposta {self.nome_apresentacao} de {len(dezenas)} dezenas, concurso {concurso} criada com sucesso!')
             return Aposta(loteria=self.nome, concurso=concurso, dezenas=dezenas)
+        logger.error(f'A aposta não foi criada.')
 
     def surpresinha(self, quantidade: int = None) -> list[int]:
         if quantidade is None:
@@ -52,6 +53,10 @@ class Loteria(ABC):
         logger.info(f'Aposta salva com sucesso!')
 
     def dezenas_sao_validas(self, dezenas: list[int]) -> bool:
+        if dezenas is None:
+            logger.error(f'DEZENAS não pode ser None')
+            return False
+
         qtd, mid, mad = len(dezenas), min(dezenas), max(dezenas)
         validar = True
         if not (self.limites.minimo <= qtd <= self.limites.maximo):
@@ -91,6 +96,16 @@ class Loteria(ABC):
                 case '3':
                     done = True
 
+    def listar_apostas(self, concurso: int = None) -> None:
+        apostas = self._adb.ler_apostas(self.nome, concurso)
+        if apostas:
+            print(f'{len(apostas)} encontradas para {self.nome_apresentacao}:')
+            for ap in apostas:
+                print(f'{" ".join((f"{n:0>2}" for n in ap.dezenas)):<30} Concurso: {ap.concurso:>4} Conferida: {ap.conferida}')
+        else:
+            print(f'Nenhuma aposta encontrada para {self.nome_apresentacao}.')
+
+
 class DuplaSena(Loteria):
     def __init__(self):
         super().__init__(nome='duplasena', nome_apresentacao='Dupla-Sena',
@@ -117,7 +132,7 @@ class MegaSena(Loteria):
 
 class Quina(Loteria):
     def __init__(self):
-        super().__init__(nome='lotofacil', nome_apresentacao='Quina',
+        super().__init__(nome='quina', nome_apresentacao='Quina',
                          limites=Limites(1, 80, 5, 15))
 
 
