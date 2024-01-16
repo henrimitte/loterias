@@ -13,17 +13,15 @@ def main():
     parser.add_argument('-d', '--dezenas', type=int, nargs='*')
     parser.add_argument('-c', '--concurso', type=int, nargs='?')
     parser.add_argument('-l', '--listar', action='store_true')
-    args = parser.parse_args()
 
+    args = parser.parse_args()
     loteria = loteria_factory(args.loteria)
 
     if args.listar:
         loteria.listar_apostas(args.concurso)
-
     else:
         aposta = loteria.criar_aposta(args.dezenas, args.concurso)
-        if aposta:
-            loteria.salvar_aposta(aposta)
+        loteria.salvar_aposta(aposta)
 
     loteria.encerrar()
 

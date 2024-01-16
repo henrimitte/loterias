@@ -58,8 +58,11 @@ class Loteria(ABC):
             f'Erro ao gerar SURPRESINHA.\QUANTIDADE de dezenas deve obedecer os limites: {self.limites.minimo} <= QUANTIDADE <= {self.limites.maximo}. QUANTIDADE fornecida = {quantidade}.')
 
     def salvar_aposta(self, aposta: Aposta) -> None:
-        self._adb.registrar_aposta(aposta)
-        logger.info(f'Aposta salva com sucesso!')
+        if aposta:
+            self._adb.registrar_aposta(aposta)
+            logger.info(f'Aposta salva com sucesso!')
+        else:
+            logger.error(f'Não foi possível salvar a aposta.')
 
     def dezenas_sao_validas(self, dezenas: list[int]) -> bool:
         if dezenas is None:
