@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class Aposta:
+    '''Retorna uma nova Aposta.'''
     loteria: str
     concurso: int
     dezenas: list[int]
@@ -15,6 +16,7 @@ class Aposta:
     _id: int = field(repr=False, default=None)
 
     def to_db(self) -> dict:
+        '''Exporta como dicionário para salvar no Banco de Dados.'''
         return {'loteria': self.loteria,
                 'concurso': self.concurso,
                 'dezenas': json.dumps(self.dezenas),
@@ -25,6 +27,7 @@ class Aposta:
 
     @classmethod
     def from_db(cls, aposta):
+        '''Retorna uma Aposta a partir de uma querry do Banco de Dados.'''
         return Aposta(_id=aposta[0],
                       loteria=aposta[1],
                       concurso=aposta[2],
