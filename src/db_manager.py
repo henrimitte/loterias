@@ -3,6 +3,10 @@ import sqlite3
 from pathlib import Path
 
 from aposta import Aposta
+from config import config_logger
+
+
+logger = config_logger(__name__)
 
 
 class DBManager:
@@ -10,14 +14,17 @@ class DBManager:
         self.db_path = db_path
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
+        logger.debug(f'DBManager iniciado. Caminho: {self.db_path}')
 
     def close_db(self):
         if self.conn:
             self.conn.close()
+            logger.debug(f'DBManager em {self.db_path} fechado com sucesso!')
 
     def commit_db(self):
         if self.conn:
             self.conn.commit()
+            logger.debug(f'Commit em {self.db_path} executado com sucesso!')
 
 
 class ApostaDB(DBManager):
@@ -41,6 +48,7 @@ class ApostaDB(DBManager):
             valorPremiacao REAL)'''
         self.cursor.execute(sql)
         self.commit_db()
+        logger.debug(f'Tabela {self.nome_tabela} criada com sucesso!')
 
     def registrar_aposta(self, aposta) -> None:
         params = aposta.to_db()
@@ -62,8 +70,10 @@ class ApostaDB(DBManager):
             :valorPremiacao)'''
         self.cursor.execute(sql, aposta.to_db())
         self.commit_db()
+        logger.info(f'Registro inserido com sucesso em "{self.nome_tabela}"!')
 
     def ler_apostas(self, loteria: str, concurso: int = None) -> None:
+        logger.debug(f'Lendo apostas de {loteria=} e {concurso=}')
         filtro = '(loteria, concurso) = (?, ?)' if concurso else 'loteria = ?'
         sql = f'SELECT * FROM {self.nome_tabela} WHERE {filtro}'
         querry = self.cursor.execute(

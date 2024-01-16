@@ -34,7 +34,8 @@ class Loteria(ABC):
             logger.debug(f'DEZENAS não fornecidas. Gerando aposta aleatoria.')
             dezenas = self.surpresinha()
         if self.dezenas_sao_validas(dezenas):
-            logger.debug(f'Aposta {self.nome_apresentacao} de {len(dezenas)} dezenas, concurso {concurso} criada com sucesso!')
+            logger.debug(
+                f'Aposta {self.nome_apresentacao} de {len(dezenas)} dezenas, concurso {concurso} criada com sucesso!')
             return Aposta(loteria=self.nome, concurso=concurso, dezenas=dezenas)
 
     def surpresinha(self, quantidade: int = None) -> list[int]:
@@ -53,18 +54,22 @@ class Loteria(ABC):
     def dezenas_sao_validas(self, dezenas: list[int]) -> bool:
         qtd, mid, mad = len(dezenas), min(dezenas), max(dezenas)
         if not (self.limites.minimo <= qtd <= self.limites.maximo):
-            logger.error(f'QUANTIDADE incorreta de dezenas. QUANTIDADE deve obedecer limites: {self.limites.minimo} <= QUANTIDADE <= {self.limites.maximo}. QUANTIDADE fornecida = {qtd}.')
+            logger.error(
+                f'QUANTIDADE incorreta de dezenas. QUANTIDADE deve obedecer limites: {self.limites.minimo} <= QUANTIDADE <= {self.limites.maximo}. QUANTIDADE fornecida = {qtd}.')
             return False
         if not (mid >= self.limites.menor):
-            logger.error(f'MENOR dezena deve ser >= {self.limites.menor}. MENOR dezena fornecida = {mid}.')
+            logger.error(
+                f'MENOR dezena deve ser >= {self.limites.menor}. MENOR dezena fornecida = {mid}.')
             return False
         if not (mad <= self.limites.maior):
-            logger.error(f'MAIOR dezena deve ser <= {self.limites.maior}. MAIOR dezena fornecida = {mad}.')
+            logger.error(
+                f'MAIOR dezena deve ser <= {self.limites.maior}. MAIOR dezena fornecida = {mad}.')
             return False
         if not (len(set(dezenas)) == qtd):
             logger.error(f'DEZENAS não podem ser repetidas.')
             return False
-        logger.debug(f'Dezenas testadas são válidas.')
+        logger.debug(
+            f'Dezenas fornecidas são válidas para {self.nome_apresentacao}.')
         return True
 
 

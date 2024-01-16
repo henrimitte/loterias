@@ -12,12 +12,23 @@ def main(args):
     args = parser.parse_args(args.split())
 
     loteria = loteria_factory(args.loteria)
-    
-    aposta = loteria.criar_aposta(args.dezenas, args.concurso)
-    if aposta:
-        print(aposta.dezenas)
+    registrar_aposta = True
+
+    if not args.dezenas:
+        escolha = '1'
+        while escolha not in '23':
+            args.dezenas = loteria.surpresinha()
+            print(*args.dezenas, sep=' ')
+            escolha = input(
+                f'[1] Gerar novas dezenas  [2] Confirmar  [3] Sair: ')[0]
+            if escolha == '3':
+                registrar_aposta = False
+
+    if registrar_aposta:
+        aposta = loteria.criar_aposta(args.dezenas, args.concurso)
 
     loteria._adb.close_db()
 
+
 if __name__ == '__main__':
-    main('mega -d 2 13 17 44 47 56 -c 2675')
+    main('mega -c 2675')
