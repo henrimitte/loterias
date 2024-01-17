@@ -15,17 +15,17 @@ class DBManager:
         self.db_path = db_path
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
-        logger.debug(f'DBManager iniciado. Caminho: {self.db_path}')
+        logger.debug('DBManager iniciado em: %s', self.db_path)
 
-    def close_db(self):
+    def close_db(self) -> None:
         if self.conn:
             self.conn.close()
-            logger.debug(f'DBManager em {self.db_path} fechado com sucesso!')
+            logger.debug('DBManager em %s fechado com sucesso!', self.db_path)
 
-    def commit_db(self):
+    def commit_db(self) -> None:
         if self.conn:
             self.conn.commit()
-            logger.debug(f'Commit em {self.db_path} executado com sucesso!')
+            logger.debug(f'Commit em %s executado com sucesso!', self.db_path)
 
 
 class ApostaDB(DBManager):
@@ -37,7 +37,7 @@ class ApostaDB(DBManager):
         super().__init__(db_path)
         self.criar_tabela()
 
-    def criar_tabela(self):
+    def criar_tabela(self) -> None:
         sql = f'''CREATE TABLE IF NOT EXISTS {self.nome_tabela} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             loteria TEXT,
@@ -49,7 +49,7 @@ class ApostaDB(DBManager):
             valorPremiacao REAL)'''
         self.cursor.execute(sql)
         self.commit_db()
-        logger.debug(f'Tabela {self.nome_tabela} criada com sucesso!')
+        logger.debug('Tabela %s criada com sucesso!', self.nome_tabela)
 
     def registrar_aposta(self, aposta) -> None:
         params = aposta.to_db()
@@ -71,16 +71,15 @@ class ApostaDB(DBManager):
             :valorPremiacao)'''
         self.cursor.execute(sql, aposta.to_db())
         self.commit_db()
-        logger.info(f'Registro inserido com sucesso em "{self.nome_tabela}"!')
+        logger.info('Registro inserido com sucesso em "%s"!', self.nome_tabela)
 
-    def ler_apostas(self, loteria: str, concurso: int = None) -> None:
-        logger.debug(f'Lendo apostas de {loteria=} e {concurso=}')
+    def ler_apostas(self, loteria: str, concurso: int = None) -> list[Aposta] | None:
+        logger.debug('Lendo apostas de %s e concurso=%s', loteria, concurso)
         filtro = '(loteria, concurso) = (?, ?)' if concurso else 'loteria = ?'
         sql = f'SELECT * FROM {self.nome_tabela} WHERE {filtro}'
         querry = self.cursor.execute(
             sql, [arg for arg in (loteria, concurso) if arg])
-        apostas = [Aposta.from_db(ap) for ap in querry.fetchall()]
-        return apostas
+        return [Aposta.from_db(ap) for ap in querry.fetchall()] if querry else []
 
 
 class ResultadoDB(DBManager):
@@ -171,26 +170,26 @@ class ResultadoDB(DBManager):
         try:
             self.cursor.execute(sql, resultado.to_db())
             self.commit_db()
-            logger.info('Registro inserido com sucesso em "%s"!', self.nome_tabela)
         except sqlite3.IntegrityError:
             logger.debug('Registro já existe, nada para fazer.')
 
     def ler_todos_resultados(self) -> list[Resultado]:
         logger.debug('Lendo todos os resultados...')
-        querry = self.cursor.execute(f'SELECT * FROM {self.nome_tabela}').fetchall()
-        return [Resultado.from_db(r) for r in querry]
+        querry = self.cursor.execute(
+            f'SELECT * FROM {self.nome_tabela}').fetchall()
+        return [Resultado.from_db(r) for r in querry] if querry else []
 
     def ler_resultados_por_loteria(self, loteria: str, concurso: int = None) -> list[Resultado]:
-        logger.debug(f'Lendo resultados da {loteria}. Concurso: {concurso if concurso else "TODOS"}...')
+        logger.debug('Lendo resultados da %s. Concurso: %s...',
+                     loteria, concurso if concurso else "TODOS")
         filtros = f'(loteria, concurso) = ("{loteria}", {concurso})' if concurso else f'loteria = "{loteria}"'
-        querry = self.cursor.execute(f'SELECT * FROM resultados WHERE {filtros}').fetchall()
-        return [Resultado.from_db(r) for r in querry]
+        querry = self.cursor.execute(
+            f'SELECT * FROM resultados WHERE {filtros}').fetchall()
+        return [Resultado.from_db(r) for r in querry] if querry else []
 
     def ultimo_concurso_resultado_registrado_por_loteria(self, loteria: str) -> tuple[int, Resultado]:
-        logger.debug(f'Buscando último concurso registrado da {loteria}.')
+        logger.debug('Buscando último concurso registrado da %s.', loteria)
         sql = f'SELECT MAX(concurso),* FROM {self.nome_tabela} WHERE loteria = "{loteria}"'
         querry = self.cursor.execute(sql).fetchone()
         concurso, *resultado = querry
-        if concurso:
-            return concurso, Resultado.from_db(resultado)
-        return None, None
+        return (concurso, Resultado.from_db(resultado)) if concurso else (None, None)
