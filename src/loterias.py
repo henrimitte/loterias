@@ -3,6 +3,7 @@ import urllib.request
 
 from abc import ABC
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from random import sample
 
@@ -40,10 +41,34 @@ class Loteria(ABC):
         self._rdb = ResultadoDB()
         logger.debug(f'Loteria {self.nome_apresentacao} iniciada.')
 
+    def busca_e_registra_ultimo_resultado(self) -> Resultado:
+        resultado = self.buscar_ultimo_resultado_online()
+        self.salvar_resultado(resultado)
+        return resultado
+
     def criar_aposta(self, dezenas: list[int] = None, concurso: int = None) -> Aposta:
         if concurso is None:
-            logger.debug(f'CONCURSO não fornecido. Definindo como 0.')
+            logger.debug(f'CONCURSO não fornecido. Buscando último concurso registrado.')
+            ultimo, resultado = self._rdb.ultimo_concurso_resultado_registrado_por_loteria(self.nome)
+            if ultimo is None:
+                logger.debug('Nenhum concurso encontrado para %s. Atualizando banco de dados.', self.nome_apresentacao)
+                res = self.busca_e_registra_ultimo_resultado()
+                concurso = res.concurso
+            if ultimo:
+                data_prox_sorteio = datetime.strptime(resultado.dataProximoConcurso + ' 21:30', '%d/%m/%Y %H:%M')
+                if datetime.today() >= data_prox_sorteio:
+                    logger.debug('Existem novos resultados disponiveis para %s.', self.nome_apresentacao)
+                    resultado = self.buscar_ultimo_resultado_online()
+                    self.salvar_resultado(resultado)
+                    logger.debug('Resultados da %s atualizados. Definindo concurso = %s', self.nome_apresentacao, resultado.concurso)
+                    concurso = resultado.concurso
+                else:
+                    logger.debug('Resultados da %s estão atualizados. Definindo concurso = %s', self.nome_apresentacao, resultado.proximoConcurso)
+                    concurso = ultimo
+        else:
+            logger.warning('Não foi possível obter último concurso da %s, deixando como 0.', self.nome_apresentacao)
             concurso = 0
+        
         if dezenas is None:
             logger.debug(f'DEZENAS não fornecidas. Gerando aposta aleatoria.')
             dezenas = self.escolher_dezenas()
@@ -65,9 +90,16 @@ class Loteria(ABC):
     def salvar_aposta(self, aposta: Aposta) -> None:
         if aposta:
             self._adb.registrar_aposta(aposta)
-            logger.info(f'Aposta salva com sucesso!')
+            logger.info('Aposta salva com sucesso!')
         else:
-            logger.error(f'Não foi possível salvar a aposta.')
+            logger.error('Não foi possível salvar a aposta.')
+
+    def salvar_resultado(self, resultado: Resultado) -> None:
+        if resultado:
+            self._rdb.registrar_resultado(resultado)
+            logger.info('Resultado salvo com sucesso!')
+        else:
+            logger.error('Não foi possível salvar o resultado.')
 
     def dezenas_sao_validas(self, dezenas: list[int]) -> bool:
         if dezenas is None:
@@ -135,6 +167,13 @@ class Loteria(ABC):
             return Resultado.from_json(**resultado)
         logger.error('Erro ao procurar resultado online.')
 
+    def buscar_ultimo_resultado_online(self) -> Resultado:
+        logger.debug('Buscando último resultado da %s', self.nome_apresentacao)
+        url = f'https://loteriascaixa-api.herokuapp.com/api/{self.nome}/latest'
+        with urllib.request.urlopen(url) as req:
+            resultado = json.load(req)
+            return Resultado.from_json(resultado)
+        logger.error('Erro ao procurar resultado online.')
 
 class DuplaSena(Loteria):
     def __init__(self):
