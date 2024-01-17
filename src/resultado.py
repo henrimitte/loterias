@@ -56,7 +56,7 @@ class Resultado:
     @classmethod
     def from_db(cls, resultado):
         '''Retorna um Resultado a partir de uma querry do Banco de Dados.'''
-        if resultado: 
+        if resultado:
             return Resultado(
                 _id= resultado[0],
                 acumulou = bool(resultado[1]),

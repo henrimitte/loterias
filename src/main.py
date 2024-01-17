@@ -11,7 +11,7 @@ def main():
     parser = argparse.ArgumentParser(prog='loteria')
     parser.add_argument('loteria', choices=opcoes_loterias)
     parser.add_argument('-d', '--dezenas', type=int, nargs='*')
-    parser.add_argument('-c', '--concurso', type=int, nargs='?')
+    parser.add_argument('-c', '--concurso', type=int)
     parser.add_argument('-l', '--listar', action='store_true')
 
     args = parser.parse_args()

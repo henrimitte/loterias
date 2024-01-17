@@ -192,4 +192,6 @@ class ResultadoDB(DBManager):
         sql = f'SELECT MAX(concurso),* FROM {self.nome_tabela} WHERE loteria = "{loteria}"'
         querry = self.cursor.execute(sql).fetchone()
         concurso, *resultado = querry
-        return concurso, Resultado.from_db(resultado)
+        if concurso:
+            return concurso, Resultado.from_db(resultado)
+        return None, None
