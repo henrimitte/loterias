@@ -39,11 +39,11 @@ class Loteria(ABC):
         self.limites = limites
         self._adb = ApostaDB()
         self._rdb = ResultadoDB()
-        logger.debug(f'Loteria {self.nome_apresentacao} iniciada.')
+        logger.debug('Loteria %s iniciada.', self.nome_apresentacao)
 
     def criar_aposta(self, dezenas: list[int] = None, concurso: int = None) -> Aposta:
         if concurso is None:
-            logger.debug(f'CONCURSO não fornecido. Buscando último concurso registrado.')
+            logger.debug('CONCURSO não fornecido.')
             ultimo, resultado = self._rdb.ultimo_concurso_resultado_registrado_por_loteria(self.nome)
             if ultimo is None:
                 logger.debug('Nenhum concurso encontrado para %s. Atualizando banco de dados.', self.nome_apresentacao)
@@ -55,23 +55,23 @@ class Loteria(ABC):
                     logger.debug('Existem novos resultados disponiveis para %s.', self.nome_apresentacao)
                     resultado = self.buscar_resultado_online()
                     self.salvar_resultado(resultado)
-                    logger.debug('Resultados da %s atualizados. Definindo concurso = %s', self.nome_apresentacao, resultado.concurso)
+                    logger.debug('Resultados da %s foram atualizados. Definindo concurso = %s', self.nome_apresentacao, resultado.concurso)
                     concurso = resultado.concurso
                 else:
                     logger.debug('Resultados da %s estão atualizados. Definindo concurso = %s', self.nome_apresentacao, resultado.proximoConcurso)
                     concurso = ultimo
-        else:
+        if not concurso:
             logger.warning('Não foi possível obter último concurso da %s, deixando como 0.', self.nome_apresentacao)
             concurso = 0
 
         if dezenas is None:
-            logger.debug(f'DEZENAS não fornecidas. Gerando aposta aleatoria.')
+            logger.debug('DEZENAS não fornecidas.')
             dezenas = self.escolher_dezenas()
         if self.dezenas_sao_validas(dezenas):
             logger.debug(
-                f'Aposta {self.nome_apresentacao} de {len(dezenas)} dezenas, concurso {concurso} criada com sucesso!')
+                'Aposta %s de %s dezenas, concurso %s criada com sucesso!', self.nome_apresentacao, len(dezenas), concurso)
             return Aposta(loteria=self.nome, concurso=concurso, dezenas=dezenas)
-        logger.error(f'A aposta não foi criada.')
+        logger.error('A aposta não foi criada.')
 
     def salvar_aposta(self, aposta: Aposta) -> None:
         if aposta:
@@ -83,46 +83,46 @@ class Loteria(ABC):
     def listar_apostas(self, concurso: int = None) -> None:
         apostas = self._adb.ler_apostas(self.nome, concurso)
         if apostas:
-            print(f'{len(apostas)} encontradas para {self.nome_apresentacao}:')
+            logger.info('%s encontradas para %s:', len(apostas), self.nome_apresentacao)
             for ap in apostas:
                 print(f'{" ".join((f"{n:0>2}" for n in ap.dezenas)):<30} Concurso: {ap.concurso:>4} Conferida: {ap.conferida}')
         else:
-            print(f'Nenhuma aposta encontrada para {self.nome_apresentacao}.')
+            logger.info('Nenhuma aposta encontrada para %s.', self.nome_apresentacao)
 
     def surpresinha(self, quantidade: int = None) -> list[int]:
         if quantidade is None:
             quantidade = self.limites.minimo
         if self.limites.minimo <= quantidade <= self.limites.maximo:
-            logger.debug(f'Gerando SURPRESINHA com {quantidade} dezenas.')
+            logger.debug('Gerando SURPRESINHA com %s dezenas.', quantidade)
             return sorted(sample(range(self.limites.menor, self.limites.maior + 1), k=quantidade))
         logger.error(
-            f'Erro ao gerar SURPRESINHA.\QUANTIDADE de dezenas deve obedecer os limites: {self.limites.minimo} <= QUANTIDADE <= {self.limites.maximo}. QUANTIDADE fornecida = {quantidade}.')
+            'Erro ao gerar SURPRESINHA. QUANTIDADE de dezenas deve obedecer os limites: %s <= QUANTIDADE <= %s. QUANTIDADE fornecida = %s.', self.limites.minimo, self.limites.maximo, quantidade)
 
     def dezenas_sao_validas(self, dezenas: list[int]) -> bool:
         if dezenas is None:
-            logger.error(f'DEZENAS não pode ser None')
+            logger.error('DEZENAS não pode ser None')
             return False
 
         qtd, mid, mad = len(dezenas), min(dezenas), max(dezenas)
         validar = True
         if not (self.limites.minimo <= qtd <= self.limites.maximo):
             logger.error(
-                f'QUANTIDADE incorreta de dezenas. QUANTIDADE deve obedecer limites: {self.limites.minimo} <= QUANTIDADE <= {self.limites.maximo}. QUANTIDADE fornecida = {qtd}.')
+                'QUANTIDADE incorreta de dezenas. QUANTIDADE deve obedecer limites: %s <= QUANTIDADE <= %s. QUANTIDADE fornecida = %s.', self.limites.minimo, self.limites.maximo, qtd)
             validar = False
         if not (mid >= self.limites.menor):
             logger.error(
-                f'MENOR dezena deve ser >= {self.limites.menor}. MENOR dezena fornecida = {mid}.')
+                'MENOR dezena deve ser >= %s. MENOR dezena fornecida = %s.', self.limites.menor, mid)
             validar = False
         if not (mad <= self.limites.maior):
             logger.error(
-                f'MAIOR dezena deve ser <= {self.limites.maior}. MAIOR dezena fornecida = {mad}.')
+                'MAIOR dezena deve ser <= %s. MAIOR dezena fornecida = %s.', self.limites.maior, mad)
             validar = False
         if not (len(set(dezenas)) == qtd):
-            logger.error(f'DEZENAS não podem ser repetidas.')
+            logger.error('DEZENAS não podem ser repetidas.')
             validar = False
 
         if validar:
-            logger.debug(f'Dezenas fornecidas são válidas para {self.nome_apresentacao}.')
+            logger.debug('Dezenas fornecidas são válidas para %s.', self.nome_apresentacao)
         return validar
 
     def escolher_dezenas(self) -> list[int]:
@@ -130,14 +130,13 @@ class Loteria(ABC):
         escolha = '1'
         dezenas = self.surpresinha()
         while not done:
-            logger.info(f'{self.nome_apresentacao.upper()}: {" ".join(map(str, dezenas))}')
+            logger.info('%s: %s', self.nome_apresentacao.upper(), " ".join(map(str, dezenas)))
             escolha = input(
                 f'[1] Gerar novas dezenas  [2] Confirmar  [3] Sair: ')
             match escolha:
                 case '1':
                     dezenas = self.surpresinha()
                 case '2' | '':
-                    done = True
                     return dezenas
                 case '3':
                     done = True
@@ -165,7 +164,7 @@ class Loteria(ABC):
     def encerrar(self):
         self._adb.close_db()
         self._rdb.close_db()
-        logger.debug(f'Loteria {self.nome_apresentacao} encerrada.')
+        logger.debug('Loteria %s encerrada.', self.nome_apresentacao)
 
 
 class DuplaSena(Loteria):

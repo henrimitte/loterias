@@ -25,7 +25,7 @@ class DBManager:
     def commit_db(self) -> None:
         if self.conn:
             self.conn.commit()
-            logger.debug(f'Commit em %s executado com sucesso!', self.db_path)
+            logger.debug('Commit em %s executado com sucesso!', self.db_path)
 
 
 class ApostaDB(DBManager):
@@ -71,7 +71,7 @@ class ApostaDB(DBManager):
             :valorPremiacao)'''
         self.cursor.execute(sql, aposta.to_db())
         self.commit_db()
-        logger.info('Registro inserido com sucesso em "%s"!', self.nome_tabela)
+        logger.debug('Registro inserido com sucesso em "%s"!', self.nome_tabela)
 
     def ler_apostas(self, loteria: str, concurso: int = None) -> list[Aposta] | None:
         logger.debug('Lendo apostas de %s e concurso=%s', loteria, concurso)
