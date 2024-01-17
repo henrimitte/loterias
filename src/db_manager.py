@@ -96,7 +96,6 @@ class ResultadoDB(DBManager):
     def criar_tabela(self) -> None:
         '''Cria a tabela resultados no banco de dados.'''
         sql = f'''CREATE TABLE IF NOT EXISTS {self.nome_tabela} (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
             acumulou INTEGER,
             concurso INTEGER,
             data TEXT,
@@ -118,7 +117,7 @@ class ResultadoDB(DBManager):
             valorAcumuladoProximoConcurso REAL,
             valorArrecadado REAL,
             valorEstimadoProximoConcurso INTEGER,
-            UNIQUE(loteria, concurso))'''
+            PRIMARY KEY (loteria, concurso))'''
         self.cursor.execute(sql)
         self.commit_db()
         logger.debug('Tabela %s criada com sucesso!', self.nome_tabela)

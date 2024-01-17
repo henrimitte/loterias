@@ -27,7 +27,6 @@ class Resultado:
     valorAcumuladoProximoConcurso: float
     valorArrecadado: float
     valorEstimadoProximoConcurso: int
-    _id: int = field(repr=False, default=None)
 
     def to_db(self) -> dict:
         '''Exporta como dicionário para salvar no Banco de Dados.'''
@@ -51,35 +50,34 @@ class Resultado:
                 'valorAcumuladoConcurso_0_5': self.valorAcumuladoConcurso_0_5, 
                 'valorAcumuladoProximoConcurso': self.valorAcumuladoProximoConcurso, 
                 'valorArrecadado': self.valorArrecadado, 
-                'valorEstimadoProximoConcurso': self.valorEstimadoProximoConcurso}
+                'valorEstimadoProximoConcurso': int(self.valorEstimadoProximoConcurso)}
 
     @classmethod
     def from_db(cls, resultado):
         '''Retorna um Resultado a partir de uma querry do Banco de Dados.'''
         if resultado:
             return Resultado(
-                _id= resultado[0],
-                acumulou = bool(resultado[1]),
-                concurso = resultado[2],
-                data = resultado[3],
-                dataProximoConcurso = resultado[4],
-                dezenas = json.loads(resultado[5]),
-                dezenasOrdemSorteio = json.loads(resultado[6]),
-                estadosPremiados = json.loads(resultado[7]),
-                local = resultado[8],
-                localGanhadores = json.loads(resultado[9]),
-                loteria = resultado[10],
-                mesSorte = resultado[11],
-                observacao = resultado[12],
-                premiacoes = json.loads(resultado[13]),
-                proximoConcurso = resultado[14],
-                timeCoracao = resultado[15],
-                trevos = json.loads(resultado[16]),
-                valorAcumuladoConcursoEspecial = resultado[17],
-                valorAcumuladoConcurso_0_5 = resultado[18],
-                valorAcumuladoProximoConcurso = resultado[19],
-                valorArrecadado = resultado[20],
-                valorEstimadoProximoConcurso = resultado[21],)
+                acumulou = bool(resultado[0]),
+                concurso = resultado[1],
+                data = resultado[2],
+                dataProximoConcurso = resultado[3],
+                dezenas = json.loads(resultado[4]),
+                dezenasOrdemSorteio = json.loads(resultado[5]),
+                estadosPremiados = json.loads(resultado[6]),
+                local = resultado[7],
+                localGanhadores = json.loads(resultado[8]),
+                loteria = resultado[9],
+                mesSorte = resultado[10],
+                observacao = resultado[11],
+                premiacoes = json.loads(resultado[12]),
+                proximoConcurso = resultado[13],
+                timeCoracao = resultado[14],
+                trevos = json.loads(resultado[15]),
+                valorAcumuladoConcursoEspecial = resultado[16],
+                valorAcumuladoConcurso_0_5 = resultado[17],
+                valorAcumuladoProximoConcurso = resultado[18],
+                valorArrecadado = resultado[19],
+                valorEstimadoProximoConcurso = int(resultado[20]),)
 
     @classmethod
     def from_json(cls, resultado):
