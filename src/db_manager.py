@@ -41,7 +41,7 @@ class ApostaDB(DBManager):
         sql = f'''CREATE TABLE IF NOT EXISTS {self.nome_tabela} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             loteria TEXT,
-            concurso TEXT,
+            concurso INTEGER,
             dezenas TEXT,
             conferida INTEGER,
             quantidadeAcertos INTEGER,
@@ -52,7 +52,6 @@ class ApostaDB(DBManager):
         logger.debug('Tabela %s criada com sucesso!', self.nome_tabela)
 
     def registrar_aposta(self, aposta) -> None:
-        params = aposta.to_db()
         sql = f'''INSERT INTO {self.nome_tabela} (
             loteria,
             concurso,
@@ -73,7 +72,7 @@ class ApostaDB(DBManager):
         self.commit_db()
         logger.debug('Registro inserido com sucesso em "%s"!', self.nome_tabela)
 
-    def ler_apostas(self, loteria: str, concurso: int = None) -> list[Aposta] | None:
+    def ler_apostas(self, loteria: str, concurso: int = None) -> list[Aposta]:
         logger.debug('Lendo apostas de %s e concurso=%s', loteria, concurso)
         filtro = '(loteria, concurso) = (?, ?)' if concurso else 'loteria = ?'
         sql = f'SELECT * FROM {self.nome_tabela} WHERE {filtro}'
@@ -81,6 +80,22 @@ class ApostaDB(DBManager):
             sql, [arg for arg in (loteria, concurso) if arg])
         return [Aposta.from_db(ap) for ap in querry.fetchall()] if querry else []
 
+    def atualizar_aposta(self, aposta: Aposta) -> None:
+        sql = f'''UPDATE {self.nome_tabela} SET (
+            conferida,
+            dezenasAcertadas,
+            quantidadeAcertos,
+            valorPremiacao)
+                = (
+            :conferida,
+            :dezenasAcertadas,
+            :quantidadeAcertos,
+            :valorPremiacao)
+                WHERE (
+            id = {aposta._id})'''
+        self.cursor.execute(sql, aposta.to_db())
+        self.commit_db()
+        logger.debug('Aposta da %s e concurso %s atualizada com sucesso!', aposta.loteria, aposta.concurso)
 
 class ResultadoDB(DBManager):
     '''Gerenciador do banco de dados dos resultados das Loterias Caixa.'''
@@ -180,12 +195,17 @@ class ResultadoDB(DBManager):
         return [Resultado.from_db(r) for r in querry] if querry else []
 
     def ler_resultados_por_loteria(self, loteria: str, concurso: int = None) -> list[Resultado]:
-        logger.debug('Lendo resultados da %s. Concurso: %s...',
+        logger.debug('Lendo resultados da %s...',
                      loteria, concurso if concurso else "TODOS")
         filtros = f'(loteria, concurso) = ("{loteria}", {concurso})' if concurso else f'loteria = "{loteria}"'
         querry = self.cursor.execute(
             f'SELECT * FROM resultados WHERE {filtros}').fetchall()
         return [Resultado.from_db(r) for r in querry] if querry else []
+
+    def ler_resultado_por_loteria_e_concurso(self, loteria: str, concurso: int) -> Resultado:
+        logger.debug('Lendo resultado da %s. Concurso: %s...', loteria, concurso)
+        querry = self.cursor.execute('SELECT * FROM resultados WHERE (loteria, concurso) = (?, ?)', (loteria, concurso)).fetchone()
+        return Resultado.from_db(querry) if querry else None
 
     def ultimo_concurso_resultado_registrado_por_loteria(self, loteria: str) -> tuple[int, Resultado]:
         logger.debug('Buscando último concurso registrado da %s.', loteria)
