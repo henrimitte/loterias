@@ -3,7 +3,7 @@ import logging
 from .settings import LOGS_DIR
 
 
-def config_logger(name: str, file: bool = False) -> logging.Logger:
+def config_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
 
