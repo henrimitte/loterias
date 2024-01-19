@@ -8,18 +8,13 @@ logger = config_logger(__name__)
 
 
 class ResultadoDB(DBManager):
-    '''Gerenciador do banco de dados dos resultados das Loterias Caixa.'''
-    nome_tabela = 'resultados'
+    def __init__(self) -> None:
+        super().__init__('resultados')
+        self.criar_tabela(self.tabela_sql)
 
-    def __init__(self, db_path: str = None) -> None:
-        if db_path is None:
-            db_path = f'{self.nome_tabela}.db'
-        super().__init__(db_path)
-        self.criar_tabela()
-
-    def criar_tabela(self) -> None:
-        '''Cria a tabela resultados no banco de dados.'''
-        sql = f'''CREATE TABLE IF NOT EXISTS {self.nome_tabela} (
+    @property
+    def tabela_sql(self) -> str:
+        return f'''CREATE TABLE IF NOT EXISTS {self.nome_tabela} (
             acumulou INTEGER,
             concurso INTEGER,
             data TEXT,
@@ -42,12 +37,8 @@ class ResultadoDB(DBManager):
             valorArrecadado REAL,
             valorEstimadoProximoConcurso INTEGER,
             PRIMARY KEY (loteria, concurso))'''
-        self.cursor.execute(sql)
-        self.commit_db()
-        logger.debug('Tabela %s criada com sucesso!', self.nome_tabela)
 
-    def registrar_resultado(self, resultado: dict) -> None:
-        '''Registra um novo resultado no banco de dados'''
+    def registrar_resultado(self, resultado: Resultado) -> None:
         sql = f'''INSERT INTO {self.nome_tabela} (
             acumulou,
             concurso,
@@ -92,34 +83,75 @@ class ResultadoDB(DBManager):
             :valorAcumuladoProximoConcurso,
             :valorArrecadado,
             :valorEstimadoProximoConcurso)'''
-        try:
-            self.cursor.execute(sql, resultado.to_db())
-            self.commit_db()
-        except sqlite3.IntegrityError:
-            logger.debug('Registro já existe, nada para fazer.')
+        self.cursor.execute(sql, resultado.to_db())
+        self.commit_db()
+
+    def registrar_resultados(self, resultados: list[Resultado]) -> None:
+        sql = f'''INSERT INTO {self.nome_tabela} (
+            acumulou,
+            concurso,
+            data,
+            dataProximoConcurso,
+            dezenas,
+            dezenasOrdemSorteio,
+            estadosPremiados,
+            local,
+            localGanhadores,
+            loteria,
+            mesSorte,
+            observacao,
+            premiacoes,
+            proximoConcurso,
+            timeCoracao,
+            trevos,
+            valorAcumuladoConcursoEspecial,
+            valorAcumuladoConcurso_0_5,
+            valorAcumuladoProximoConcurso,
+            valorArrecadado,
+            valorEstimadoProximoConcurso) 
+                VALUES (
+            :acumulou,
+            :concurso,
+            :data,
+            :dataProximoConcurso,
+            :dezenas,
+            :dezenasOrdemSorteio,
+            :estadosPremiados,
+            :local,
+            :localGanhadores,
+            :loteria,
+            :mesSorte,
+            :observacao,
+            :premiacoes,
+            :proximoConcurso,
+            :timeCoracao,
+            :trevos,
+            :valorAcumuladoConcursoEspecial,
+            :valorAcumuladoConcurso_0_5,
+            :valorAcumuladoProximoConcurso,
+            :valorArrecadado,
+            :valorEstimadoProximoConcurso)'''
+        self.cursor.executemany(sql, (resultado.to_db()
+                                for resultado in resultados))
+        self.commit_db()
 
     def ler_todos_resultados(self) -> list[Resultado]:
-        logger.debug('Lendo todos os resultados...')
-        querry = self.cursor.execute(
-            f'SELECT * FROM {self.nome_tabela}').fetchall()
+        sql = f'SELECT * FROM {self.nome_tabela}'
+        querry = self.cursor.execute(sql).fetchall()
         return [Resultado.from_db(r) for r in querry] if querry else []
 
-    def ler_resultados_por_loteria(self, loteria: str, concurso: int = None) -> list[Resultado]:
-        logger.debug('Lendo resultados da %s...',
-                     loteria, concurso if concurso else "TODOS")
-        filtros = f'(loteria, concurso) = ("{loteria}", {concurso})' if concurso else f'loteria = "{loteria}"'
-        querry = self.cursor.execute(
-            f'SELECT * FROM resultados WHERE {filtros}').fetchall()
+    def ler_resultados_por_loteria(self, loteria: str) -> list[Resultado]:
+        sql = f'SELECT * FROM resultados WHERE loteria = "{loteria}"'
+        querry = self.cursor.execute(sql).fetchall()
         return [Resultado.from_db(r) for r in querry] if querry else []
 
     def ler_resultado_por_loteria_e_concurso(self, loteria: str, concurso: int) -> Resultado:
-        logger.debug('Lendo resultado da %s. Concurso: %s...', loteria, concurso)
-        querry = self.cursor.execute('SELECT * FROM resultados WHERE (loteria, concurso) = (?, ?)', (loteria, concurso)).fetchone()
+        sql = f'SELECT * FROM resultados WHERE (loteria, concurso) = ("{loteria}", {concurso})'
+        querry = self.cursor.execute(sql).fetchone()
         return Resultado.from_db(querry) if querry else None
 
-    def ultimo_concurso_resultado_registrado_por_loteria(self, loteria: str) -> tuple[int, Resultado]:
-        logger.debug('Buscando último concurso registrado da %s.', loteria)
+    def ultimo_resultado_registrado_por_loteria(self, loteria: str) -> Resultado:
         sql = f'SELECT MAX(concurso),* FROM {self.nome_tabela} WHERE loteria = "{loteria}"'
         querry = self.cursor.execute(sql).fetchone()
-        concurso, *resultado = querry
-        return (concurso, Resultado.from_db(resultado)) if concurso else (None, None)
+        _, *resultado = querry
+        return Resultado.from_db(resultado) if resultado else None
