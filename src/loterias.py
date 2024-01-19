@@ -61,8 +61,8 @@ class Loteria(ABC):
                     logger.debug('Resultados da %s estão atualizados. Definindo concurso = %s', self.nome_apresentacao, resultado.proximoConcurso)
                     concurso = ultimo
         if not concurso:
-            logger.warning('Não foi possível obter último concurso da %s, deixando como 0.', self.nome_apresentacao)
-            concurso = 0
+            logger.error('Não foi possível definir o concurso da aposta. Aposta não foi registrada.', self.nome_apresentacao)
+            return
 
         if dezenas is None:
             logger.debug('DEZENAS não fornecidas.')
@@ -85,9 +85,51 @@ class Loteria(ABC):
         if apostas:
             logger.info('%s encontradas para %s:', len(apostas), self.nome_apresentacao)
             for ap in apostas:
-                print(f'{" ".join((f"{n:0>2}" for n in ap.dezenas)):<30} Concurso: {ap.concurso:>4} Conferida: {ap.conferida}')
+                print(f'{" ".join((f"{n:0>2}" for n in ap.dezenas)):<30} Concurso: {ap.concurso:>4} ', end='' if ap.conferida else '\n')
+                if ap.conferida:
+                    print(f'Acertos: {ap.quantidadeAcertos:>3} Dezenas acertadas: {ap.dezenasAcertadas}')
         else:
             logger.info('Nenhuma aposta encontrada para %s.', self.nome_apresentacao)
+
+    @property
+    def resultados_estao_atualizados(self) -> bool:
+        ultimo, resultado = self._rdb.ultimo_concurso_resultado_registrado_por_loteria(self.nome)
+        if not ultimo:
+            return False
+        data_prox_sorteio = datetime.strptime(resultado.dataProximoConcurso + ' 21:30', '%d/%m/%Y %H:%M')
+        atualizado = data_prox_sorteio >= datetime.today()
+        logger.debug('Resultados da %s estão atualizados? %s', self.nome_apresentacao, 'Sim' if atualizado else 'Não')
+        return atualizado
+
+    @property
+    def ultimo_concurso_sorteado(self) -> int:
+        if self.resultados_estao_atualizados:
+            ultimo, resultado = self._rdb.ultimo_concurso_resultado_registrado_por_loteria(self.nome)
+            return ultimo
+        resultado = self.busca_e_registra_resultado()
+        if resultado:
+            return resultado.concurso
+
+    def conferir_apostas(self, concurso: int = None) -> None:
+        apostas = [ap for ap in self._adb.ler_apostas(self.nome, concurso) if not ap.conferida]
+        ultimo = self.ultimo_concurso_sorteado
+        if not apostas:
+            logger.debug('Nenhuma aposta para conferir.')
+        for ap in apostas:
+            if ap.concurso <= ultimo:
+                logger.debug('Conferindo aposta da %s para o concurso %s.', self.nome_apresentacao, ap.concurso)
+                self.confere_resultado_aposta(ap)
+
+    def confere_resultado_aposta(self, aposta: Aposta) -> None:
+        resultado = self._rdb.ler_resultado_por_loteria_e_concurso(aposta.loteria, aposta.concurso) or self.busca_e_registra_resultado(aposta.concurso)
+        if not resultado:
+            logger.debug('Não foi possível obter o resultado da loteria %s para o concurso %s. Aposta não conferida.', aposta.loteria, aposta.concurso)
+            return
+        aposta.dezenasAcertadas = sorted(set(map(int, resultado.dezenas)) & set(aposta.dezenas))
+        aposta.quantidadeAcertos = len(aposta.dezenasAcertadas)
+        aposta.conferida = True
+        aposta.valorPremiacao = 0.0
+        self._adb.atualizar_aposta(aposta)
 
     def surpresinha(self, quantidade: int = None) -> list[int]:
         if quantidade is None:
@@ -141,18 +183,22 @@ class Loteria(ABC):
                 case '3':
                     done = True
 
-    def busca_e_registra_resultado(self) -> Resultado:
-        resultado = self.buscar_resultado_online()
+    def busca_e_registra_resultado(self, concurso: int = None) -> Resultado:
+        resultado = self.buscar_resultado_online(concurso)
         self.salvar_resultado(resultado)
         return resultado
 
     def buscar_resultado_online(self, concurso: int = None) -> Resultado:
+        if concurso is not None and concurso <= 0:
+            logger.error('Concurso deve ser MAIOR que 0.')
         logger.debug('Buscando resultado da %s. Concurso: %s', self.nome_apresentacao, concurso if concurso else "ÚLTIMO")
         url = f'https://loteriascaixa-api.herokuapp.com/api/{self.nome}/{concurso if concurso else "latest"}'
-        with urllib.request.urlopen(url) as req:
-            resultado = json.load(req)
-            return Resultado.from_json(resultado)
-        logger.error('Erro ao procurar resultado online. URL usada: %s', url)
+        try:
+            with urllib.request.urlopen(url) as req:
+                resultado = json.load(req)
+                return Resultado.from_json(resultado)
+        except Exception as e:
+            logger.error('Erro ao procurar resultado online. URL usada: %s', url)
 
     def salvar_resultado(self, resultado: Resultado) -> None:
         if resultado:
