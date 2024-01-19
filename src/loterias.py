@@ -48,7 +48,7 @@ class Loteria(ABC):
             if ultimo is None:
                 logger.debug('Nenhum concurso encontrado para %s. Atualizando banco de dados.', self.nome_apresentacao)
                 res = self.busca_e_registra_resultado()
-                concurso = res.concurso
+                concurso = res.proximoConcurso
             if ultimo:
                 data_prox_sorteio = datetime.strptime(resultado.dataProximoConcurso + ' 21:30', '%d/%m/%Y %H:%M')
                 if datetime.today() >= data_prox_sorteio:
@@ -56,10 +56,9 @@ class Loteria(ABC):
                     resultado = self.buscar_resultado_online()
                     self.salvar_resultado(resultado)
                     logger.debug('Resultados da %s foram atualizados. Definindo concurso = %s', self.nome_apresentacao, resultado.concurso)
-                    concurso = resultado.concurso
                 else:
                     logger.debug('Resultados da %s estão atualizados. Definindo concurso = %s', self.nome_apresentacao, resultado.proximoConcurso)
-                    concurso = ultimo
+                concurso = resultado.proximoConcurso
         if not concurso:
             logger.error('Não foi possível definir o concurso da aposta. Aposta não foi registrada.', self.nome_apresentacao)
             return
