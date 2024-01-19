@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 
 @dataclass
 class Aposta:
-    '''Retorna uma nova Aposta.'''
     loteria: str
     concurso: int
     dezenas: list[int]
@@ -16,23 +15,24 @@ class Aposta:
     _id: int = field(repr=False, default=None)
 
     def to_db(self) -> dict:
-        '''Exporta como dicionário para salvar no Banco de Dados.'''
-        return {'loteria': self.loteria,
-                'concurso': self.concurso,
-                'dezenas': json.dumps(self.dezenas),
-                'conferida': self.conferida,
-                'quantidadeAcertos': self.quantidadeAcertos,
-                'dezenasAcertadas': json.dumps(self.dezenasAcertadas),
-                'valorPremiacao': self.valorPremiacao, }
+        dct = {'loteria': self.loteria,
+               'concurso': self.concurso,
+               'dezenas': json.dumps(self.dezenas),
+               'conferida': self.conferida,
+               'quantidadeAcertos': self.quantidadeAcertos,
+               'dezenasAcertadas': json.dumps(self.dezenasAcertadas),
+               'valorPremiacao': self.valorPremiacao, }
+        if self._id:
+            dct['_id'] = self._id
+        return dct
 
     @classmethod
     def from_db(cls, aposta):
-        '''Retorna uma Aposta a partir de uma querry do Banco de Dados.'''
-        return Aposta(_id=aposta[0],
-                      loteria=aposta[1],
-                      concurso=aposta[2],
-                      dezenas=json.loads(aposta[3]),
-                      conferida=bool(aposta[4]),
-                      quantidadeAcertos=aposta[5],
-                      dezenasAcertadas=json.loads(aposta[6]),
-                      valorPremiacao=aposta[7],)
+        return Aposta(loteria=aposta[0],
+                      concurso=aposta[1],
+                      dezenas=json.loads(aposta[2]),
+                      conferida=bool(aposta[3]),
+                      quantidadeAcertos=aposta[4],
+                      dezenasAcertadas=json.loads(aposta[5]),
+                      valorPremiacao=aposta[6],
+                      _id=aposta[7],)
