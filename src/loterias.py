@@ -75,20 +75,31 @@ class Loteria(ABC):
     def salvar_aposta(self, aposta: Aposta) -> None:
         if aposta:
             self._adb.registrar_aposta(aposta)
-            logger.info('Aposta salva com sucesso!')
+            logger.info('Aposta foi salva.')
         else:
             logger.error('Não foi possível salvar a aposta.')
 
     def listar_apostas(self, concurso: int = None) -> None:
-        apostas = self._adb.ler_apostas(self.nome, concurso)
-        if apostas:
-            logger.info('%s encontradas para %s:', len(apostas), self.nome_apresentacao)
-            for ap in apostas:
-                print(f'{" ".join((f"{n:0>2}" for n in ap.dezenas)):<30} Concurso: {ap.concurso:>4} ', end='' if ap.conferida else '\n')
-                if ap.conferida:
-                    print(f'Acertos: {ap.quantidadeAcertos:>3} Dezenas acertadas: {ap.dezenasAcertadas}')
+        if concurso:
+            apostas = self._adb.ler_apostas_por_loteria_e_concurso(self.nome, concurso)
         else:
-            logger.info('Nenhuma aposta encontrada para %s.', self.nome_apresentacao)
+            apostas = self._adb.ler_apostas_por_loteria(self.nome)
+        if not apostas:
+            logger.info('Nenhuma aposta da %s registrada', self.nome_apresentacao)
+            return
+        logger.info('Listando apostas da %s', self.nome_apresentacao)
+        logger.info('ID | CONCURSO | DEZENAS | ACERTOS | DEZENAS ACERTADAS | PREMIAÇÃO (R$)')
+        for aposta in apostas:
+            self.apresentar_aposta(aposta)
+
+    def apresentar_aposta(self, aposta: Aposta) -> None:
+        print(aposta._id,
+              aposta.concurso,
+              ' '.join(map(lambda n: f'{n:0>2}', aposta.dezenas)),
+              aposta.quantidadeAcertos,
+              ' '.join(map(lambda n: f'{n:0>2}', aposta.dezenasAcertadas)),
+              aposta.valorPremiacao,
+              sep=' | ')
 
     @property
     def resultados_estao_atualizados(self) -> bool:

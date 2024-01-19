@@ -1,31 +1,35 @@
 import sqlite3
 
-from pathlib import Path
+from abc import ABC
 
 from aposta import Aposta
-from config import config_logger
+from config import config_logger, DATA_DIR
 from resultado import Resultado
 
 
 logger = config_logger(__name__)
 
 
-class DBManager:
+class DBManager(ABC):
     def __init__(self, db_path: str) -> None:
-        self.db_path = db_path
+        self.db_path = DATA_DIR / db_path
+        logger.debug('Iniciando DBManager em: %s', self.db_path)
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
-        logger.debug('DBManager iniciado em: %s', self.db_path)
+
+    def criar_tabela(self, sql: str) -> None:
+        logger.debug('Criando tabela "%s"', self.nome_tabela)
+        self.cursor.execute(sql)
 
     def close_db(self) -> None:
+        logger.debug('Fechando DBManager em %s', self.db_path)
         if self.conn:
             self.conn.close()
-            logger.debug('DBManager em %s fechado com sucesso!', self.db_path)
 
     def commit_db(self) -> None:
+        logger.debug('Commitando em %s', self.db_path)
         if self.conn:
             self.conn.commit()
-            logger.debug('Commit em %s executado com sucesso!', self.db_path)
 
 
 class ApostaDB(DBManager):
@@ -35,10 +39,11 @@ class ApostaDB(DBManager):
         if db_path is None:
             db_path = f'{self.nome_tabela}.db'
         super().__init__(db_path)
-        self.criar_tabela()
+        self.criar_tabela(self.tabela_sql)
 
-    def criar_tabela(self) -> None:
-        sql = f'''CREATE TABLE IF NOT EXISTS {self.nome_tabela} (
+    @property
+    def tabela_sql(self) -> str:
+        return f'''CREATE TABLE IF NOT EXISTS {self.nome_tabela} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             loteria TEXT,
             concurso INTEGER,
@@ -47,11 +52,9 @@ class ApostaDB(DBManager):
             quantidadeAcertos INTEGER,
             dezenasAcertadas TEXT,
             valorPremiacao REAL)'''
-        self.cursor.execute(sql)
-        self.commit_db()
-        logger.debug('Tabela %s criada com sucesso!', self.nome_tabela)
 
     def registrar_aposta(self, aposta) -> None:
+        logger.debug('Registrando aposta em "%s".', self.nome_tabela)
         sql = f'''INSERT INTO {self.nome_tabela} (
             loteria,
             concurso,
@@ -69,18 +72,32 @@ class ApostaDB(DBManager):
             :dezenasAcertadas,
             :valorPremiacao)'''
         self.cursor.execute(sql, aposta.to_db())
-        self.commit_db()
-        logger.debug('Registro inserido com sucesso em "%s"!', self.nome_tabela)
 
     def ler_apostas(self, loteria: str, concurso: int = None) -> list[Aposta]:
-        logger.debug('Lendo apostas de %s e concurso=%s', loteria, concurso)
+        logger.debug('Lendo apostas em "%s"', self.nome_tabela)
         filtro = '(loteria, concurso) = (?, ?)' if concurso else 'loteria = ?'
         sql = f'SELECT * FROM {self.nome_tabela} WHERE {filtro}'
         querry = self.cursor.execute(
             sql, [arg for arg in (loteria, concurso) if arg])
         return [Aposta.from_db(ap) for ap in querry.fetchall()] if querry else []
 
+    def ler_todas_apostas(self) -> list[Aposta]:
+        sql = f'SELECT * FROM {self.nome_tabela}'
+        querry = self.cursor.execute(sql)
+        return [Aposta.from_db(ap) for ap in querry.fetchall()] if querry else []
+
+    def ler_apostas_por_loteria(self, loteria: str) -> list[Aposta]:
+        sql = f'SELECT * FROM {self.nome_tabela} WHERE loteria = "{loteria}"'
+        querry = self.conn.execute(sql)
+        return [Aposta.from_db(ap) for ap in querry.fetchall()] if querry else []
+
+    def ler_apostas_por_loteria_e_concurso(self, loteria: str, concurso: int) -> list[Aposta]:
+        sql = f'SELECT * FROM {self.nome_tabela} WHERE (loteria, concurso) = ("{loteria}", {concurso})'
+        querry = self.conn.execute(sql)
+        return [Aposta.from_db(ap) for ap in querry.fetchall()] if querry else []
+
     def atualizar_aposta(self, aposta: Aposta) -> None:
+        logger.debug('Atualizando aposta')
         sql = f'''UPDATE {self.nome_tabela} SET (
             conferida,
             dezenasAcertadas,
@@ -95,7 +112,7 @@ class ApostaDB(DBManager):
             id = {aposta._id})'''
         self.cursor.execute(sql, aposta.to_db())
         self.commit_db()
-        logger.debug('Aposta da %s e concurso %s atualizada com sucesso!', aposta.loteria, aposta.concurso)
+
 
 class ResultadoDB(DBManager):
     '''Gerenciador do banco de dados dos resultados das Loterias Caixa.'''
