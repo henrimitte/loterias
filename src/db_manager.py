@@ -72,6 +72,7 @@ class ApostaDB(DBManager):
             :dezenasAcertadas,
             :valorPremiacao)'''
         self.cursor.execute(sql, aposta.to_db())
+        self.commit_db()
 
     def ler_apostas(self, loteria: str, concurso: int = None) -> list[Aposta]:
         logger.debug('Lendo apostas em "%s"', self.nome_tabela)
