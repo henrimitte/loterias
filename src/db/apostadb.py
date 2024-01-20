@@ -1,6 +1,6 @@
-from aposta import Aposta
-from config import config_logger
 from .dbmanager import DBManager
+from config import config_logger
+from models.aposta import Aposta
 
 
 class ApostaDB(DBManager):
@@ -38,6 +38,26 @@ class ApostaDB(DBManager):
             :dezenasAcertadas,
             :valorPremiacao)'''
         self.cursor.execute(sql, aposta.to_db())
+        self.commit_db()
+
+    def registrar_apostas(self, apostas: list[Aposta]) -> None:
+        sql = f'''INSERT INTO {self.nome_tabela} (
+            loteria,
+            concurso,
+            dezenas,
+            conferida,
+            quantidadeAcertos,
+            dezenasAcertadas,
+            valorPremiacao)
+                VALUES (
+            :loteria,
+            :concurso,
+            :dezenas,
+            :conferida,
+            :quantidadeAcertos,
+            :dezenasAcertadas,
+            :valorPremiacao)'''
+        self.cursor.executemany(sql, (aposta.to_db() for aposta in apostas))
         self.commit_db()
 
     def ler_apostas_por_loteria(self, loteria: str) -> list[Aposta]:
