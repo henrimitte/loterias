@@ -1,7 +1,6 @@
 from .dbmanager import DBManager
-from resultado import Resultado
-
 from config import config_logger, DATA_DIR
+from models.resultado import Resultado
 
 
 logger = config_logger(__name__)
