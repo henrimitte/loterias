@@ -7,10 +7,9 @@ from datetime import datetime
 from enum import StrEnum
 from random import sample
 
-from aposta import Aposta
-from resultado import Resultado
 from config import config_logger
-from db_manager import ApostaDB, ResultadoDB
+from db import ApostaDB, ResultadoDB
+from models import Aposta, Resultado
 
 
 logger = config_logger(__name__)
@@ -44,17 +43,16 @@ class Loteria(ABC):
     def criar_aposta(self, dezenas: list[int] = None, concurso: int = None) -> Aposta:
         if concurso is None:
             logger.debug('CONCURSO não fornecido.')
-            ultimo, resultado = self._rdb.ultimo_concurso_resultado_registrado_por_loteria(self.nome)
-            if ultimo is None:
+            resultado = self._rdb.ultimo_resultado_registrado_por_loteria(self.nome)
+            if not resultado:
                 logger.debug('Nenhum concurso encontrado para %s. Atualizando banco de dados.', self.nome_apresentacao)
                 res = self.busca_e_registra_resultado()
-                concurso = res.proximoConcurso
-            if ultimo:
+                concurso = resultado.proximoConcurso
+            if resultado:
                 data_prox_sorteio = datetime.strptime(resultado.dataProximoConcurso + ' 21:30', '%d/%m/%Y %H:%M')
                 if datetime.today() >= data_prox_sorteio:
                     logger.debug('Existem novos resultados disponiveis para %s.', self.nome_apresentacao)
-                    resultado = self.buscar_resultado_online()
-                    self.salvar_resultado(resultado)
+                    resultado = self.buscar_e_registra_resultado()
                     logger.debug('Resultados da %s foram atualizados. Definindo concurso = %s', self.nome_apresentacao, resultado.concurso)
                 else:
                     logger.debug('Resultados da %s estão atualizados. Definindo concurso = %s', self.nome_apresentacao, resultado.proximoConcurso)
@@ -63,7 +61,7 @@ class Loteria(ABC):
             logger.error('Não foi possível definir o concurso da aposta. Aposta não foi registrada.', self.nome_apresentacao)
             return
 
-        if dezenas is None:
+        if not dezenas:
             logger.debug('DEZENAS não fornecidas.')
             dezenas = self.escolher_dezenas()
         if self.dezenas_sao_validas(dezenas):
@@ -103,8 +101,8 @@ class Loteria(ABC):
 
     @property
     def resultados_estao_atualizados(self) -> bool:
-        ultimo, resultado = self._rdb.ultimo_concurso_resultado_registrado_por_loteria(self.nome)
-        if not ultimo:
+        resultado = self._rdb.ultimo_resultado_registrado_por_loteria(self.nome)
+        if not resultado:
             return False
         data_prox_sorteio = datetime.strptime(resultado.dataProximoConcurso + ' 21:30', '%d/%m/%Y %H:%M')
         atualizado = data_prox_sorteio >= datetime.today()
@@ -114,21 +112,24 @@ class Loteria(ABC):
     @property
     def ultimo_concurso_sorteado(self) -> int:
         if self.resultados_estao_atualizados:
-            ultimo, resultado = self._rdb.ultimo_concurso_resultado_registrado_por_loteria(self.nome)
-            return ultimo
+            resultado = self._rdb.ultimo_resultado_registrado_por_loteria(self.nome)
+            return resultado.concurso
         resultado = self.busca_e_registra_resultado()
         if resultado:
             return resultado.concurso
 
     def conferir_apostas(self, concurso: int = None) -> None:
-        apostas = [ap for ap in self._adb.ler_apostas(self.nome, concurso) if not ap.conferida]
+        if concurso:
+            apostas = [ap for ap in self._adb.ler_apostas_por_loteria_e_concurso(self.nome, concurso) if not ap.conferida]
+        else:
+            apostas = [ap for ap in self._adb.ler_apostas_por_loteria(self.nome) if not ap.conferida]
         ultimo = self.ultimo_concurso_sorteado
         if not apostas:
             logger.debug('Nenhuma aposta para conferir.')
-        for ap in apostas:
-            if ap.concurso <= ultimo:
-                logger.debug('Conferindo aposta da %s para o concurso %s.', self.nome_apresentacao, ap.concurso)
-                self.confere_resultado_aposta(ap)
+        for aposta in apostas:
+            if aposta.concurso <= ultimo:
+                logger.debug('Conferindo aposta da %s para o concurso %s.', self.nome_apresentacao, aposta.concurso)
+                self.confere_resultado_aposta(aposta)
 
     def confere_resultado_aposta(self, aposta: Aposta) -> None:
         resultado = self._rdb.ler_resultado_por_loteria_e_concurso(aposta.loteria, aposta.concurso) or self.busca_e_registra_resultado(aposta.concurso)
