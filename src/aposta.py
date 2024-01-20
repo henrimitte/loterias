@@ -28,11 +28,11 @@ class Aposta:
 
     @classmethod
     def from_db(cls, aposta):
-        return Aposta(loteria=aposta[0],
-                      concurso=aposta[1],
-                      dezenas=json.loads(aposta[2]),
-                      conferida=bool(aposta[3]),
-                      quantidadeAcertos=aposta[4],
-                      dezenasAcertadas=json.loads(aposta[5]),
-                      valorPremiacao=aposta[6],
-                      _id=aposta[7],)
+        return Aposta(_id=aposta[0],
+                      loteria=aposta[1],
+                      concurso=aposta[2],
+                      dezenas=json.loads(aposta[3]),
+                      conferida=bool(aposta[4]),
+                      quantidadeAcertos=aposta[5],
+                      dezenasAcertadas=json.loads(aposta[6]),
+                      valorPremiacao=aposta[7],)
