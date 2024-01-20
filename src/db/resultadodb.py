@@ -152,5 +152,5 @@ class ResultadoDB(DBManager):
     def ultimo_resultado_registrado_por_loteria(self, loteria: str) -> Resultado:
         sql = f'SELECT MAX(concurso),* FROM {self.nome_tabela} WHERE loteria = "{loteria}"'
         querry = self.cursor.execute(sql).fetchone()
-        _, *resultado = querry
-        return Resultado.from_db(resultado) if resultado else None
+        ultimo_concurso, *resultado = querry
+        return Resultado.from_db(resultado) if ultimo_concurso else None
