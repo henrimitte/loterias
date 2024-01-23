@@ -1,5 +1,7 @@
 import argparse
 
+from utils import limpar_tudo
+
 
 from models.loterias import opcoes_loterias, loteria_factory
 
@@ -16,11 +18,13 @@ def main():
     args = parser.parse_args()
     loteria = loteria_factory(args.loteria)
 
+    if args.resultado:
+        loteria.conferir_apostas(args.concurso)
+
     if args.listar:
         loteria.listar_apostas(args.concurso)
-    elif args.resultado:
-        loteria.conferir_apostas(args.concurso)
-    else:
+
+    if not args.resultado and not args.listar:
         aposta = loteria.criar_aposta(args.dezenas, args.concurso, args.jogos)
 
     loteria.encerrar()

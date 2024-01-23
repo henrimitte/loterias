@@ -41,22 +41,11 @@ class Loteria(ABC):
         logger.debug('Loteria %s iniciada.', self.nome_apresentacao)
 
     def criar_aposta(self, dezenas: list[int] = None, concurso: int = None, jogos: int = 1) -> None:
-        if concurso is None:
+        if not concurso:
             logger.debug('CONCURSO não fornecido.')
-            resultado = self._rdb.ultimo_resultado_registrado_por_loteria(self.nome)
-            if not resultado:
-                logger.debug('Nenhum concurso encontrado para %s. Atualizando banco de dados.', self.nome_apresentacao)
-                res = self.busca_e_registra_resultado()
-                concurso = resultado.proximoConcurso
-            if resultado:
-                data_prox_sorteio = datetime.strptime(resultado.dataProximoConcurso + ' 21:30', '%d/%m/%Y %H:%M')
-                if datetime.today() >= data_prox_sorteio:
-                    logger.debug('Existem novos resultados disponiveis para %s.', self.nome_apresentacao)
-                    resultado = self.buscar_e_registra_resultado()
-                    logger.debug('Resultados da %s foram atualizados. Definindo concurso = %s', self.nome_apresentacao, resultado.concurso)
-                else:
-                    logger.debug('Resultados da %s estão atualizados. Definindo concurso = %s', self.nome_apresentacao, resultado.proximoConcurso)
-                concurso = resultado.proximoConcurso
+            if not self.resultados_estao_atualizados:
+                self.busca_e_registra_resultado()
+            concurso = self.proximo_concurso
         if not concurso:
             logger.error('Não foi possível definir o concurso da aposta. Aposta não foi registrada.', self.nome_apresentacao)
             return
@@ -64,16 +53,22 @@ class Loteria(ABC):
         if not dezenas:
             logger.debug('DEZENAS não fornecidas.')
             dezenas = self.escolher_dezenas()
-        if self.dezenas_sao_validas(dezenas):
+        if not self.dezenas_sao_validas(dezenas):
+            return
+
+        try:
             if jogos:
                 logger.debug(
-                    'Aposta %s de %s dezenas, concurso %s criada com sucesso!', self.nome_apresentacao, len(dezenas), concurso)
+                    'Aposta %s de %s dezenas, concurso %s até %s criada com sucesso!', self.nome_apresentacao, len(dezenas), concurso, concurso + (jogos - 1))
                 apostas = [Aposta(loteria=self.nome, concurso=n, dezenas=dezenas) for n in range(concurso, concurso + jogos)]
                 self._adb.registrar_apostas(apostas)
             else:
+                logger.debug(
+                    'Aposta %s de %s dezenas, concurso %s criada com sucesso!', self.nome_apresentacao, len(dezenas), concurso)
                 aposta = Aposta(loteria=self.nome, concurso=concurso, dezenas=dezenas)
                 self.salvar_aposta(aposta)
-        logger.error('A aposta não foi criada.')
+        except Exception as e:
+            logger.error('A aposta não foi criada.')
 
     def salvar_aposta(self, aposta: Aposta) -> None:
         if aposta:
@@ -123,6 +118,11 @@ class Loteria(ABC):
         if resultado:
             return resultado.concurso
 
+    @property
+    def proximo_concurso(self) -> int:
+        ucs = self.ultimo_concurso_sorteado
+        return ucs + 1 if ucs else None
+
     def conferir_apostas(self, concurso: int = None) -> None:
         if concurso:
             apostas = [ap for ap in self._adb.ler_apostas_por_loteria_e_concurso(self.nome, concurso) if not ap.conferida]
@@ -133,7 +133,7 @@ class Loteria(ABC):
             logger.debug('Nenhuma aposta para conferir.')
         for aposta in apostas:
             if aposta.concurso <= ultimo:
-                logger.debug('Conferindo aposta da %s para o concurso %s.', self.nome_apresentacao, aposta.concurso)
+                logger.debug('Conferindo aposta %s da %s para o concurso %s.', aposta.dezenas, self.nome_apresentacao, aposta.concurso)
                 self.confere_resultado_aposta(aposta)
 
     def confere_resultado_aposta(self, aposta: Aposta) -> None:
