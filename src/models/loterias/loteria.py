@@ -40,7 +40,7 @@ class Loteria(ABC):
         self._rdb = ResultadoDB()
         logger.debug('Loteria %s iniciada.', self.nome_apresentacao)
 
-    def criar_aposta(self, dezenas: list[int] = None, concurso: int = None) -> Aposta:
+    def criar_aposta(self, dezenas: list[int] = None, concurso: int = None, jogos: int = 1) -> None:
         if concurso is None:
             logger.debug('CONCURSO não fornecido.')
             resultado = self._rdb.ultimo_resultado_registrado_por_loteria(self.nome)
@@ -65,9 +65,14 @@ class Loteria(ABC):
             logger.debug('DEZENAS não fornecidas.')
             dezenas = self.escolher_dezenas()
         if self.dezenas_sao_validas(dezenas):
-            logger.debug(
-                'Aposta %s de %s dezenas, concurso %s criada com sucesso!', self.nome_apresentacao, len(dezenas), concurso)
-            return Aposta(loteria=self.nome, concurso=concurso, dezenas=dezenas)
+            if jogos:
+                logger.debug(
+                    'Aposta %s de %s dezenas, concurso %s criada com sucesso!', self.nome_apresentacao, len(dezenas), concurso)
+                apostas = [Aposta(loteria=self.nome, concurso=n, dezenas=dezenas) for n in range(concurso, concurso + jogos)]
+                self._adb.registrar_apostas(apostas)
+            else:
+                aposta = Aposta(loteria=self.nome, concurso=concurso, dezenas=dezenas)
+                self.salvar_aposta(aposta)
         logger.error('A aposta não foi criada.')
 
     def salvar_aposta(self, aposta: Aposta) -> None:

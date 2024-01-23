@@ -1,10 +1,7 @@
 import argparse
 
 
-from loterias import opcoes_loterias, loteria_factory
-
-
-
+from models.loterias import opcoes_loterias, loteria_factory
 
 
 def main():
@@ -12,6 +9,7 @@ def main():
     parser.add_argument('loteria', choices=opcoes_loterias)
     parser.add_argument('-d', '--dezenas', type=int, nargs='*')
     parser.add_argument('-c', '--concurso', type=int)
+    parser.add_argument('-j', '--jogos', type=int)
     parser.add_argument('-l', '--listar', action='store_true')
     parser.add_argument('-r', '--resultado', action='store_true')
 
@@ -23,8 +21,7 @@ def main():
     elif args.resultado:
         loteria.conferir_apostas(args.concurso)
     else:
-        aposta = loteria.criar_aposta(args.dezenas, args.concurso)
-        loteria.salvar_aposta(aposta)
+        aposta = loteria.criar_aposta(args.dezenas, args.concurso, args.jogos)
 
     loteria.encerrar()
 
