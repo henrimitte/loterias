@@ -86,18 +86,30 @@ class Loteria(ABC):
             logger.info('Nenhuma aposta da %s registrada', self.nome_apresentacao)
             return
         logger.info('Listando apostas da %s', self.nome_apresentacao)
-        logger.info('ID | CONCURSO | DEZENAS | ACERTOS | DEZENAS ACERTADAS | PREMIAÇÃO (R$)')
+        print('ID | CONCURSO | DEZENAS | ACERTOS | PREMIAÇÃO (R$)')
         for aposta in apostas:
             self.apresentar_aposta(aposta)
 
     def apresentar_aposta(self, aposta: Aposta) -> None:
-        print(aposta._id,
+        nums_coloridos = self._coloriza_dezenas(aposta)
+        print(f'{aposta._id:0>2}',
               aposta.concurso,
-              ' '.join(map(lambda n: f'{n:0>2}', aposta.dezenas)),
-              aposta.quantidadeAcertos,
-              ' '.join(map(lambda n: f'{n:0>2}', aposta.dezenasAcertadas)),
+              nums_coloridos,
+              f'{aposta.quantidadeAcertos:>2}',
               aposta.valorPremiacao,
               sep=' | ')
+
+    def _coloriza_dezenas(self, aposta: Aposta) -> list[str]:
+        if not aposta.quantidadeAcertos:
+            return ' '.join(map(lambda n: f'{n:0>2}', aposta.dezenas))
+        nums_coloridos = []
+        for n in aposta.dezenas:
+            if n not in aposta.dezenasAcertadas:
+                n_colorido = '\033[37m' + f'{n:0>2}' + '\033[m'
+            else:
+                n_colorido = '\033[1;30;42m' + f'{n:0>2}' + '\033[m'
+            nums_coloridos.append(n_colorido)
+        return ' '.join(nums_coloridos)
 
     @property
     def resultados_estao_atualizados(self) -> bool:
