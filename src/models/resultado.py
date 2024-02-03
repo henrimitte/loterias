@@ -1,6 +1,8 @@
 import json
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+
+from .premiacao import Premiacao
 
 
 @dataclass
@@ -41,7 +43,7 @@ class Resultado:
             'loteria': self.loteria,
             'mesSorte': self.mesSorte,
             'observacao': self.observacao,
-            'premiacoes': json.dumps(self.premiacoes),
+            'premiacoes': json.dumps([asdict(p) for p in self.premiacoes]),
             'proximoConcurso': self.proximoConcurso,
             'timeCoracao': self.timeCoracao,
             'trevos': json.dumps(self.trevos),
@@ -66,7 +68,7 @@ class Resultado:
             loteria=resultado[9],
             mesSorte=resultado[10],
             observacao=resultado[11],
-            premiacoes=json.loads(resultado[12]),
+            premiacoes=[Premiacao(**p) for p in json.loads(resultado[12])],
             proximoConcurso=resultado[13],
             timeCoracao=resultado[14],
             trevos=json.loads(resultado[15]),
@@ -91,7 +93,7 @@ class Resultado:
             loteria=resultado['loteria'],
             mesSorte=resultado['mesSorte'],
             observacao=resultado['observacao'],
-            premiacoes=resultado['premiacoes'],
+            premiacoes=[Premiacao(**p) for p in resultado['premiacoes']],
             proximoConcurso=resultado['proximoConcurso'],
             timeCoracao=resultado['timeCoracao'],
             trevos=resultado['trevos'],
