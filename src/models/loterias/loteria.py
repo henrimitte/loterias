@@ -32,10 +32,11 @@ class Loterias(StrEnum):
 
 
 class Loteria(ABC):
-    def __init__(self, nome: str, nome_apresentacao: str, limites: Limites) -> None:
+    def __init__(self, nome: str, nome_apresentacao: str, limites: Limites, faixas: int = None) -> None:
         self.nome = str(nome)
         self.nome_apresentacao = nome_apresentacao
         self.limites = limites
+        self.faixas = faixas
         self._adb = ApostaDB()
         self._rdb = ResultadoDB()
         logger.debug('Loteria %s iniciada.', self.nome_apresentacao)
@@ -85,18 +86,20 @@ class Loteria(ABC):
         if not apostas:
             logger.info('Nenhuma aposta da %s registrada', self.nome_apresentacao)
             return
-        logger.info('Listando apostas da %s', self.nome_apresentacao)
+        print(f'Listando apostas da {self.nome_apresentacao}')
         print('ID | CONCURSO | DEZENAS | ACERTOS | PREMIAÇÃO (R$)')
         for aposta in apostas:
             self.apresentar_aposta(aposta)
 
     def apresentar_aposta(self, aposta: Aposta) -> None:
         nums_coloridos = self._coloriza_dezenas(aposta)
+        acertos = f'{aposta.quantidadeAcertos:>2}' if aposta.quantidadeAcertos else '--'
+        premiacao = aposta.valorPremiacao if int(aposta.valorPremiacao) else '--'
         print(f'{aposta._id:0>2}',
               aposta.concurso,
               nums_coloridos,
-              f'{aposta.quantidadeAcertos:>2}',
-              aposta.valorPremiacao,
+              acertos,
+              premiacao,
               sep=' | ')
 
     def _coloriza_dezenas(self, aposta: Aposta) -> list[str]:
@@ -156,7 +159,12 @@ class Loteria(ABC):
         aposta.dezenasAcertadas = sorted(set(map(int, resultado.dezenas)) & set(aposta.dezenas))
         aposta.quantidadeAcertos = len(aposta.dezenasAcertadas)
         aposta.conferida = True
-        aposta.valorPremiacao = 0.0
+        faixa = self.limites.minimo - aposta.quantidadeAcertos
+        if faixa < self.faixas:
+            faixas_sorted = sorted(resultado.premiacoes, key=lambda p: p.faixa)
+            aposta.valorPremiacao = faixas_sorted[faixa].valorPremio
+        else:
+            aposta.valorPremiacao = 0.0
         self._adb.atualizar_aposta(aposta)
 
     def surpresinha(self, quantidade: int = None) -> list[int]:
